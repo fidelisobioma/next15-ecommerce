@@ -1,0 +1,11 @@
+import { ProductCardSkeleton } from "./ProductCardSkeletton";
+
+export default function ProductsSkeleton() {
+  return (
+    <div className="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <ProductCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}

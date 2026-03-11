@@ -1,0 +1,66 @@
+import { Prisma } from "@/generated/prisma";
+// import { Prisma } from "@prisma/client";
+import Stripe from "stripe";
+
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
+}
+
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2026-01-28.clover",
+  // apiVersion: "2025-04-30.basil",
+  typescript: true,
+});
+
+export type OrderWithItemsAndProducts = Prisma.OrderGetPayload<{
+  include: {
+    items: {
+      include: {
+        product: true;
+      };
+    };
+  };
+}>;
+
+export async function createCheckoutSession(order: OrderWithItemsAndProducts) {
+  if (!order.items || order.items.length === 0) {
+    throw new Error("Order has no items");
+  }
+
+  const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
+    order.items.map((item) => ({
+      price_data: {
+        currency: "usd",
+        product_data: {
+          name: item.product.name,
+          description: item.product.description ?? "",
+          images: [item.product.image ?? ""],
+        },
+        unit_amount: item.product.price * 100, // Stripe expects amount in cents
+      },
+      quantity: item.quantity,
+    }));
+
+  // const successUrl = `${process.env.NEXT_PUBLIC_URL}/order/success_id={CHECKOUT_SESSION_ID}`;
+  const successUrl = `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = `${process.env.NEXT_PUBLIC_URL}/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`;
+
+  try {
+    //Initialize Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        orderId: order.id.toString(),
+        ...(order.userId && { userId: order.userId }),
+      },
+    });
+    return { sessionId: session.id, sessionUrl: session.url };
+  } catch (error) {
+    console.error("Error creating checkout session:", error);
+    throw new Error("Failed to create checkout session");
+  }
+}

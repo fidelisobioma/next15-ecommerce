@@ -1,0 +1,157 @@
+import { AddToCartButton } from "@/components/add-to-cart-button";
+import Breadcrumbs from "@/components/breadcrumbs";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { getProductsBySlug } from "@/lib/actions";
+import { prisma } from "@/lib/prisma";
+import { formatPrice } from "@/lib/utils";
+import { Separator } from "@radix-ui/react-separator";
+
+import Image from "next/image";
+import { notFound } from "next/navigation";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const product = await getProductsBySlug(slug);
+
+  if (!product) {
+    return {};
+  }
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+    },
+    images: [
+      {
+        url: product.image,
+      },
+    ],
+  };
+}
+export const revalidate = 3600;
+
+export async function generateStaticParams() {
+  const products = await prisma.product.findMany({
+    select: {
+      slug: true,
+    },
+  });
+  return products.map((product) => ({
+    slug: product.slug,
+  }));
+}
+
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const product = await getProductsBySlug(slug);
+
+  if (!product) {
+    notFound();
+  }
+
+  const jsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    image: product.image,
+    description: product.description,
+    offers: {
+      "@type": "Offer",
+      price: product.price,
+      priceCurrency: "USD",
+      availability: product.inventory > 0 ? "InStock" : "OutOfStock",
+    },
+  };
+
+  const breadcrumbs = [
+    { label: "Products", href: "/" },
+    {
+      label: product.category?.name,
+      href: `/search/${product.category.slug}`,
+    },
+    { label: product.name, href: `/product/${product.slug}`, active: true },
+  ];
+
+  return (
+    <main className="mx-auto py-4 container">
+      <Breadcrumbs items={breadcrumbs} />
+      <Card>
+        <CardContent className="gap-4 grid grid-cols-1 md:grid-cols-2 p-6">
+          <div className="relative rounded-lg h-50 md:h-100 overflow-hidden">
+            {product.image && (
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                priority
+                sizes="(max-width:768px) 100vw, 50vw"
+                className="object-cover"
+              />
+            )}
+          </div>
+
+          <div>
+            <h1 className="mb-2 font-bold text-3xl">{product.name}</h1>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="font-semibold text-lg">
+                {formatPrice(product.price)}
+              </span>
+              <Badge variant="outline">{product.category?.name}</Badge>
+            </div>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <h2 className="font-medium">Description</h2>
+              <p>{product.description}</p>
+            </div>
+            <Separator className="my-4" />
+            <div className="space-y-2">
+              <h2 className="font-medium">Availability</h2>
+
+              <div className="flex items-center gap-2">
+                {product.inventory > 0 ? (
+                  <Badge
+                    variant="outline"
+                    className="font-semibold text-green-600"
+                  >
+                    In Stock
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="font-semibold text-red-600"
+                  >
+                    Out of Stock
+                  </Badge>
+                )}
+                {product.inventory > 0 && (
+                  <span className="ml-2 text-gray-500 text-xs">
+                    ( {product.inventory} items available)
+                  </span>
+                )}
+              </div>
+            </div>
+            <Separator className="my-4" />
+
+            <AddToCartButton product={product} />
+          </div>
+        </CardContent>
+      </Card>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+    </main>
+  );
+}
