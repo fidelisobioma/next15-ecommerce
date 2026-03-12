@@ -9,15 +9,6 @@
     "lint": "eslint",
     "db:seed": "prisma db seed"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@prisma/engines",
-      "esbuild",
-      "prisma",
-      "sharp",
-      "unrs-resolver"
-    ]
-  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@prisma/adapter-pg": "^7.2.0",
