@@ -1,9 +1,9 @@
 import OrderStatusBadge from "@/components/order-status-badge";
-import { OrderWithItemsAndProducts } from "@/lib/stripe";
+import { OrderWithItemsAndProduct } from "@/lib/stripe";
 import { formatPrice } from "@/lib/utils";
 
 interface OrderSummaryProps {
-  order: OrderWithItemsAndProducts;
+  order: OrderWithItemsAndProduct;
 }
 
 export default async function OrderSummary({ order }: OrderSummaryProps) {
