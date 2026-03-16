@@ -3,12 +3,12 @@
 import { cookies } from "next/headers";
 import { getCart } from "./actions";
 import { prisma } from "@/lib/prisma";
-import { createCheckoutSession, OrderWithItemsAndProducts } from "./stripe";
+import { createCheckoutSession, OrderWithItemsAndProduct } from "./stripe";
 import { auth } from "./auth";
 
 export type ProcessCheckoutResponse = {
   sessionUrl: string;
-  order: OrderWithItemsAndProducts;
+  order: OrderWithItemsAndProduct;
 };
 
 export async function processCheckout(): Promise<ProcessCheckoutResponse> {
