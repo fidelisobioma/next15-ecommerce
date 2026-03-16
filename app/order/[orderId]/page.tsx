@@ -18,7 +18,13 @@ export default async function OrderPage({ params }: OrderPageProps) {
     where: {
       id: orderId,
     },
-    include: { items: { include: { product: true } } },
+    include: {
+      items: {
+        include: {
+          product: true,
+        },
+      },
+    },
   });
 
   if (!order) {
@@ -27,13 +33,20 @@ export default async function OrderPage({ params }: OrderPageProps) {
 
   const session = await auth();
   const isOwner = session?.user?.id === order.userId;
+
   return (
     <main className="mx-auto py-4 container">
       {isOwner && (
         <Breadcrumbs
           items={[
-            { label: "My Account", href: "/account" },
-            { label: "Order", href: `/order/${order.id}` },
+            {
+              label: "My Account",
+              href: "/account",
+            },
+            {
+              label: "Order",
+              href: `/order/${order.id}`,
+            },
           ]}
         />
       )}
