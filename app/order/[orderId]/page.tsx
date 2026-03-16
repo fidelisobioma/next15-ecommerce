@@ -6,9 +6,9 @@ import { auth } from "@/lib/auth";
 import Breadcrumbs from "@/components/breadcrumbs";
 
 interface OrderPageProps {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 export default async function OrderPage({ params }: OrderPageProps) {
