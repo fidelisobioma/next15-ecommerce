@@ -6,9 +6,7 @@ export async function POST(request: NextRequest) {
   const payload = await request.text();
 
   const sig = request.headers.get("stripe-signature");
-  //   console.log("Received Stripe webhook:", payload);
 
-  //   return new Response("Webhook received", { status: 200 });
   if (!sig) {
     return new NextResponse("Missing Stripe signature", { status: 400 });
   }
