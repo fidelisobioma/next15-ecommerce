@@ -1,18 +1,17 @@
-import { Prisma } from "@/generated/prisma";
 // import { Prisma } from "@prisma/client";
+import { Prisma } from "@/generated/prisma";
 import Stripe from "stripe";
 
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not defined in environment variables");
+  throw new Error("Missing STRIPE_SECRET_KEY environment variable");
 }
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2026-01-28.clover",
-  // apiVersion: "2025-04-30.basil",
   typescript: true,
 });
 
-export type OrderWithItemsAndProducts = Prisma.OrderGetPayload<{
+export type OrderWithItemsAndProduct = Prisma.OrderGetPayload<{
   include: {
     items: {
       include: {
@@ -22,31 +21,32 @@ export type OrderWithItemsAndProducts = Prisma.OrderGetPayload<{
   };
 }>;
 
-export async function createCheckoutSession(order: OrderWithItemsAndProducts) {
+export async function createCheckoutSession(order: OrderWithItemsAndProduct) {
   if (!order.items || order.items.length === 0) {
     throw new Error("Order has no items");
   }
 
   const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] =
-    order.items.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: {
-          name: item.product.name,
-          description: item.product.description ?? "",
-          images: [item.product.image ?? ""],
+    order.items.map((item) => {
+      return {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: item.product.name,
+            description: item.product.description ?? "",
+            images: [item.product.image ?? ""],
+          },
+          unit_amount: item.product.price * 100,
         },
-        unit_amount: item.product.price * 100, // Stripe expects amount in cents
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
 
-  // const successUrl = `${process.env.NEXT_PUBLIC_URL}/order/success_id={CHECKOUT_SESSION_ID}`;
   const successUrl = `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${process.env.NEXT_PUBLIC_URL}/checkout/cancel?session_id={CHECKOUT_SESSION_ID}`;
 
   try {
-    //Initialize Stripe checkout session
+    // Initialize Stripe Checkout session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -58,6 +58,7 @@ export async function createCheckoutSession(order: OrderWithItemsAndProducts) {
         ...(order.userId && { userId: order.userId }),
       },
     });
+
     return { sessionId: session.id, sessionUrl: session.url };
   } catch (error) {
     console.error("Error creating checkout session:", error);
